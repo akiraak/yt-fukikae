@@ -590,7 +590,6 @@ def copy_video_thumb_final(output_dir: Path, image_path: Path, final_copy_dir: P
 
 
 # ===== 引数処理・エントリポイント =====
-# ===== 引数処理・エントリポイント =====
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -643,9 +642,9 @@ def parse_args() -> argparse.Namespace:
         help="タイトル縁取りの太さ（ImageMagick の -strokewidth、デフォルト: %(default)s）",
     )
     parser.add_argument(
-        "--image-only",
+        "--no-draw-url",
         action="store_true",
-        help="音声処理を行わず、chobi_screen_with_text.png だけを生成する",
+        help="サムネイルにYouTubeのURLを描画しない",
     )
     parser.add_argument(
         "--input-audio",
@@ -677,6 +676,11 @@ def parse_args() -> argparse.Namespace:
         default=str(FINAL_COPY_DIR),
         help="最終 mp4 / 画像 のコピー先ディレクトリ（デフォルト: %(default)s）",
     )
+    parser.add_argument(
+        "--image-only",
+        action="store_true",
+        help="音声処理を行わず、chobi_screen_with_text.png だけを生成する",
+    )
     return parser.parse_args()
 
 
@@ -692,6 +696,9 @@ def main() -> None:
 
     # 1. 出力ディレクトリ準備
     output_dir = prepare_output_dir(OUTPUT_BASE_DIR / args.name)
+
+    # Noneを渡すと create_video_thumb_final 側で描画がスキップされる
+    url_text_for_thumb = None if args.no_draw_url else youtube_short_url
 
     # 1.1 すでに存在する場合は丸ごと削除（中身をクリア）
     if output_dir.exists():
@@ -719,8 +726,7 @@ def main() -> None:
             args.title_line_spacing,
             args.title_offset_y,
             args.title_strokewidth,
-            # ★ここでサムネに描くURLは短縮版を渡す
-            video_url=youtube_short_url,
+            video_url=url_text_for_thumb,
         )
         if video_thumb_final is not None:
             print(f"[RESULT] Overlay image created: {video_thumb_final}")
@@ -773,7 +779,7 @@ def main() -> None:
         args.title_line_spacing,
         args.title_offset_y,
         args.title_strokewidth,
-        video_url=youtube_short_url,
+        video_url=url_text_for_thumb,
     )
 
     # 11. 最終ファイルをコピー
