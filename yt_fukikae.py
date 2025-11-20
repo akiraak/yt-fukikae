@@ -647,6 +647,11 @@ def parse_args() -> argparse.Namespace:
         help="サムネイルにYouTubeのURLを描画しない",
     )
     parser.add_argument(
+        "--input-thumbnail",
+        type=str,
+        help="YouTubeからDLせず、このローカル画像ファイルをサムネイルとして使う（例: /path/to/image.jpg）",
+    )
+    parser.add_argument(
         "--input-audio",
         type=str,
         help="YouTubeからDLせず、このローカル音声ファイルを入力として使う（例: /path/to/audio.m4a）",
@@ -709,10 +714,19 @@ def main() -> None:
     output_dir = prepare_output_dir(output_dir)
 
     # 1.5 サムネイル取得（画像だけモードでも使うので先に実行）
-    #
-    # download_thumbnail のシグネチャが以前と同じで
-    # 「URLのリスト」を受け取る想定なら、こうしてラップします:
-    download_thumbnail([youtube_url], output_dir)
+    if args.input_thumbnail:
+        print(f"[MODE] local-thumbnail: ローカル画像ファイルを使用します: {args.input_thumbnail}")
+        src_thumb = Path(args.input_thumbnail).expanduser()
+        if not src_thumb.exists():
+            raise FileNotFoundError(f"Input thumbnail file not found: {src_thumb}")
+
+        # パイプラインが期待するファイル名 (video_thumb_src.jpg) にリネーム/コピーして配置
+        dest_thumb = output_dir / VIDEO_THUMB_SRC_FILENAME
+        shutil.copy2(src_thumb, dest_thumb)
+        print(f"[COPY] Copied local thumbnail to: {dest_thumb}")
+    else:
+        # 指定がなければ通常通りYouTubeからDL
+        download_thumbnail([youtube_url], output_dir)
 
     # === 画像だけ作るモード ===================================
     if args.image_only:
