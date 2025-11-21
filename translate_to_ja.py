@@ -56,6 +56,9 @@ PREVIEW_LENGTH = 40
 
 def translate_text(client, text: str, model: str) -> str:
     """多言語→日本語翻訳（既存の自然な日本語は極力そのまま）。"""
+
+    user_content = f"Translate the following text into Japanese according to the system instructions:\n\n{text}"
+
     messages = [
         {
             "role": "system",
@@ -63,21 +66,20 @@ def translate_text(client, text: str, model: str) -> str:
         },
         {
             "role": "user",
-            "content": text,
+            "content": user_content,
         },
     ]
 
     kwargs = {
         "model": model,
         "messages": messages,
+        # 翻訳タスクなので temperature は低め（0）に固定するのが安全です
+        "temperature": 0.0,
     }
-    if not model.startswith("gpt-5"):
-        kwargs["temperature"] = 0.2
 
     try:
         response = client.chat.completions.create(**kwargs)
     except Exception as e:
-        # ここで明示的に例外を投げる
         raise RuntimeError(f"OpenAI 翻訳API呼び出しに失敗しました: {e}") from e
 
     if not response.choices or response.choices[0].message.content is None:
