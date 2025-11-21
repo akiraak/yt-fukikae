@@ -427,28 +427,34 @@ def create_video_thumb_final(
         "convert",
         str(base_image),
         "-gravity", "North",
-
-        # 日付テキスト
-        "-font", OVERLAY_FONT2_PATH,
-        "-pointsize", str(OVERLAY_HEADER_POINTSIZE),
-        "-fill", OVERLAY_HEADER_FILL,
-        "-stroke", OVERLAY_HEADER_STROKE,
-        "-strokewidth", str(OVERLAY_HEADER_STROKEWIDTH),
-        "-annotate", OVERLAY_HEADER_POS, header_text,
-        "-strokewidth", str(0),
-        "-annotate", OVERLAY_HEADER_POS, header_text,
-
-        # タイトルテキスト
-        "-font", OVERLAY_FONT_PATH,
-        "-pointsize", str(title_pointsize),
-        "-fill", OVERLAY_TITLE_FILL,
-        "-stroke", OVERLAY_TITLE_STROKE,
-        "-strokewidth", str(title_strokewidth),
-        "-interline-spacing", str(title_line_spacing),
-        "-annotate", title_pos_str, title_text,
-        "-strokewidth", str(0),
-        "-annotate", title_pos_str, title_text,
     ]
+
+    # ヘッダーテキストがあれば描画
+    if header_text:
+        cmd.extend([
+            "-font", OVERLAY_FONT2_PATH,
+            "-pointsize", str(OVERLAY_HEADER_POINTSIZE),
+            "-fill", OVERLAY_HEADER_FILL,
+            "-stroke", OVERLAY_HEADER_STROKE,
+            "-strokewidth", str(OVERLAY_HEADER_STROKEWIDTH),
+            "-annotate", OVERLAY_HEADER_POS, header_text,
+            "-strokewidth", str(0),
+            "-annotate", OVERLAY_HEADER_POS, header_text,
+        ])
+
+    # タイトルテキストがあれば描画
+    if title_text:
+        cmd.extend([
+            "-font", OVERLAY_FONT_PATH,
+            "-pointsize", str(title_pointsize),
+            "-fill", OVERLAY_TITLE_FILL,
+            "-stroke", OVERLAY_TITLE_STROKE,
+            "-strokewidth", str(title_strokewidth),
+            "-interline-spacing", str(title_line_spacing),
+            "-annotate", title_pos_str, title_text,
+            "-strokewidth", str(0),
+            "-annotate", title_pos_str, title_text,
+        ])
 
     # 元動画URLテキスト
     if video_url:
@@ -605,16 +611,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--name",
         required=True,
-        help="output/ 配下に作成する作業ディレクトリ名（例: NVIDIA_work）",
+        help="output/ 配下に作成する作業ディレクトリ名",
     )
     parser.add_argument(
         "--header-text",
-        required=True,
-        help="サムネイルに載せる日付テキスト（例: 2025-11-14）",
+        default="",
+        help="サムネイルの上部に載せるテキスト",
     )
     parser.add_argument(
         "--title-text",
-        required=True,
+        default="",
         help="サムネイルに載せるタイトルテキスト",
     )
     parser.add_argument(
@@ -633,7 +639,7 @@ def parse_args() -> argparse.Namespace:
         "--title-offset-y",
         type=int,
         default=0,
-        help="タイトルの上下位置オフセット（ピクセル, 正で下, 負で上。ベースは OVERLAY_TITLE_POS_Y）",
+        help="タイトルの上下位置オフセット（ピクセル, 正で下, 負で上）",
     )
     parser.add_argument(
         "--title-strokewidth",
@@ -684,7 +690,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--image-only",
         action="store_true",
-        help="音声処理を行わず、chobi_screen_with_text.png だけを生成する",
+        help="音声処理を行わず、サムネイルだけを生成する",
     )
     return parser.parse_args()
 
