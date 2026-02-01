@@ -169,13 +169,12 @@ def main() -> None:
         ]
         print("[INFO] --image-only: YouTube からはサムネイルのみ取得します（動画/音声はダウンロードしません）")
     else:
-        # 通常モード: 動画 + 音声 + サムネ
+        # 通常モード: 動画 + サムネ（音声は動画から分離する）
         cmd_dl = [
             sys.executable,
             str(dl_script_path),
             "--video-id", args.youtube_id,
             "--output-video", str(video_path),
-            "--output-audio", str(audio_path),
             "--output-thumb", str(thumb_path),
         ]
 
@@ -185,6 +184,22 @@ def main() -> None:
     if result.returncode != 0:
         print("[FATAL] dl_youtube.py failed")
         sys.exit(result.returncode)
+
+    # 通常モードの場合: ffmpegで動画から音声を分離
+    if not args.image_only:
+        cmd_extract_audio = [
+            "ffmpeg",
+            "-y",
+            "-i", str(video_path),
+            "-vn",
+            "-acodec", "copy",
+            str(audio_path),
+        ]
+        print_command("extract audio (ffmpeg)", cmd_extract_audio)
+        result = subprocess.run(cmd_extract_audio)
+        if result.returncode != 0:
+            print("[FATAL] ffmpeg audio extraction failed")
+            sys.exit(result.returncode)
 
     # make_final_video.py で使う共通情報
     make_final_video_path = base_dir / "make_final_video.py"

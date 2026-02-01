@@ -9,44 +9,6 @@ import urllib.error
 from yt_dlp import YoutubeDL
 
 
-# ========= AUDIO =========
-def download_audio(video_id: str, output_path: Path) -> Path | None:
-    """
-    音声のみをダウンロードして output_path に保存する。
-    拡張子が付いていればそれを codec として使う（例: .m4a, .mp3）。
-    拡張子が無ければ m4a にする。
-    """
-    url = f"https://www.youtube.com/watch?v={video_id}"
-
-    output_path = output_path.expanduser().resolve()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    suffix = output_path.suffix.lstrip(".").lower()
-    codec = suffix if suffix else "m4a"
-
-    base = output_path.with_suffix("")  # 拡張子なしベース名
-
-    ydl_opts: dict = {
-        "format": "bestaudio/best",
-        "noplaylist": True,
-        "outtmpl": str(base) + ".%(ext)s",
-        "postprocessors": [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": codec,
-                "preferredquality": "192",
-            }
-        ],
-    }
-
-    final_path = base.with_suffix(f".{codec}")
-
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-
-    return final_path if final_path.exists() else None
-
-
 # ========= VIDEO =========
 def download_video(video_id: str, output_path: Path) -> Path | None:
     """
@@ -62,10 +24,11 @@ def download_video(video_id: str, output_path: Path) -> Path | None:
     ext = "mp4"
 
     ydl_opts: dict = {
-        "format": "bv*+ba/b",                # 映像+音声
+        "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]",
         "noplaylist": True,
         "outtmpl": str(base) + ".%(ext)s",
-        "merge_output_format": ext,          # 最終的なコンテナを mp4 に
+        "merge_output_format": ext,
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
     }
 
     final_path = base.with_suffix(f".{ext}")
@@ -119,7 +82,7 @@ def download_thumbnail(video_id: str, output_path: Path) -> Path | None:
 # ========= CLI 部分 =========
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="YouTube 動画IDから動画・音声・サムネイルをダウンロードします。"
+        description="YouTube 動画IDから動画・サムネイルをダウンロードします。"
     )
 
     parser.add_argument(
@@ -132,10 +95,6 @@ def parse_args() -> argparse.Namespace:
         help="動画ファイルの出力パス（例: outputs/NAME/source_video.mp4）",
     )
     parser.add_argument(
-        "--output-audio",
-        help="音声ファイルの出力パス（例: outputs/NAME/source_audio.m4a）",
-    )
-    parser.add_argument(
         "--output-thumb",
         help="サムネイル画像の出力パス（例: outputs/NAME/source_thumb.png）",
     )
@@ -146,20 +105,17 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    if not any([args.output_video, args.output_audio, args.output_thumb]):
+    if not any([args.output_video, args.output_thumb]):
         raise SystemExit(
-            "[ERROR] --output-video / --output-audio / --output-thumb のいずれかを指定してください。"
+            "[ERROR] --output-video / --output-thumb のいずれかを指定してください。"
         )
 
     video_id = args.video_id
 
-    saved_video = saved_audio = saved_thumb = None
+    saved_video = saved_thumb = None
 
     if args.output_video:
         saved_video = download_video(video_id, Path(args.output_video))
-
-    if args.output_audio:
-        saved_audio = download_audio(video_id, Path(args.output_audio))
 
     if args.output_thumb:
         saved_thumb = download_thumbnail(video_id, Path(args.output_thumb))
@@ -171,11 +127,6 @@ def main() -> None:
         print(f"[VIDEO]  {saved_video}  ({saved_video.stat().st_size / (1024*1024):.2f} MB)")
     elif args.output_video:
         print("[VIDEO]  ダウンロード失敗")
-
-    if saved_audio:
-        print(f"[AUDIO]  {saved_audio}  ({saved_audio.stat().st_size / (1024*1024):.2f} MB)")
-    elif args.output_audio:
-        print("[AUDIO]  ダウンロード失敗")
 
     if saved_thumb:
         print(f"[THUMB]  {saved_thumb}  ({saved_thumb.stat().st_size / 1024:.1f} KB)")
